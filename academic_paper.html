@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toward a Higher-Dimensional Approach to Computational Complexity</title>
+
+<!-- MathJax for proper mathematical notation -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    tags: 'ams',
+    packages: {'[+]': ['ams', 'boldsymbol']}
+  },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
+  startup: { ready() { MathJax.startup.defaultReady(); } }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js" crossorigin="anonymous"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+
+<style>
+  /* ═══ DESIGN TOKENS ═══════════════════════════════════════════ */
+  :root {
+    --paper:    #faf8f3;
+    --paper2:   #f4f1e8;
+    --paper3:   #ede9db;
+    --ink:      #1a1612;
+    --ink2:     #3a342c;
+    --ink3:     #6b6158;
+    --ink4:     #9a9088;
+    --rule:     #d4cfc4;
+    --rule2:    #bab5a8;
+    --accent:   #2c4a7c;    /* deep academic blue */
+    --accent2:  #4a6fa5;
+    --accent3:  #7a9fd4;
+    --gold:     #8b6914;
+    --gold2:    #c4960f;
+    --red:      #8b2020;
+    --green:    #1a4a2a;
+    --math-bg:  #f0ede4;
+    --code-bg:  #ece8de;
+    --drop-cap: #2c4a7c;
+  }
+
+  /* ═══ RESET & BASE ═══════════════════════════════════════════ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; font-size: 18px; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Source Serif 4', 'Libre Baskerville', Georgia, serif;
+    font-weight: 300;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+
+  /* Subtle paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ═══ LAYOUT ══════════════════════════════════════════════════ */
+  .page-wrap {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══ SIDEBAR / TOC ══════════════════════════════════════════ */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--paper2);
+    border-right: 1px solid var(--rule);
+    padding: 2.5rem 1.25rem 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--rule2); border-radius: 2px; }
+
+  .sidebar-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    color: var(--ink4);
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .toc { list-style: none; flex: 1; }
+  .toc li { margin-bottom: 0.1rem; }
+
+  .toc a {
+    display: block;
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.72rem;
+    color: var(--ink3);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+    line-height: 1.4;
+  }
+
+  .toc a:hover {
+    color: var(--accent);
+    background: var(--paper3);
+  }
+
+  .toc a.active {
+    color: var(--accent);
+    background: var(--paper3);
+    font-weight: 400;
+  }
+
+  .toc .toc-section {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--ink4);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.6rem 0.5rem 0.2rem;
+    margin-top: 0.5rem;
+  }
+
+  .toc .toc-sub a {
+    padding-left: 1rem;
+    font-size: 0.68rem;
+    color: var(--ink4);
+  }
+
+  .toc .toc-sub a:hover { color: var(--accent2); }
+
+  .sidebar-meta {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--ink4);
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+  }
+
+  /* ═══ MAIN CONTENT ═══════════════════════════════════════════ */
+  main {
+    max-width: 740px;
+    padding: 0 3.5rem 6rem;
+    margin: 0 auto;
+  }
+
+  /* ═══ TITLE PAGE ═════════════════════════════════════════════ */
+  .title-page {
+    padding: 5rem 0 4rem;
+    border-bottom: 2px solid var(--rule2);
+    margin-bottom: 4rem;
+  }
+
+  .journal-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--ink4);
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  .paper-title {
+    font-family: 'Playfair Display', 'Libre Baskerville', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.15;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+
+  .paper-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-weight: 400;
+    font-style: italic;
+    color: var(--ink2);
+    margin-bottom: 2.5rem;
+    line-height: 1.3;
+  }
+
+  .author-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .author-name {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--ink2);
+  }
+
+  .author-note {
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--ink4);
+  }
+
+  .paper-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--ink4);
+    letter-spacing: 0.08em;
+    margin-bottom: 2rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+
+  /* ═══ ABSTRACT ════════════════════════════════════════════════ */
+  .abstract {
+    background: var(--paper2);
+    border-left: 3px solid var(--accent);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .abstract-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+  }
+
+  .abstract p {
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--ink2);
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  .keywords {
+    font-size: 0.78rem;
+    color: var(--ink3);
+    margin-top: 0.75rem;
+    line-height: 1.6;
+  }
+
+  .keywords strong {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--ink4);
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  /* ═══ SECTIONS ════════════════════════════════════════════════ */
+  .section { margin-bottom: 4rem; }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    color: var(--ink4);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  h1.section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+    margin-bottom: 1.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--rule2);
+    letter-spacing: -0.01em;
+  }
+
+  h2.subsection-title {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 2.5rem 0 0.9rem;
+    letter-spacing: 0;
+  }
+
+  h3.subsubsection-title {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--ink2);
+    margin: 2rem 0 0.75rem;
+  }
+
+  /* ═══ BODY TEXT ═══════════════════════════════════════════════ */
+  p {
+    font-size: 1rem;
+    line-height: 1.85;
+    color: var(--ink2);
+    text-align: justify;
+    hyphens: auto;
+    margin-bottom: 1.1rem;
+  }
+
+  /* Drop cap for first paragraph of each major section */
+  .drop-cap::first-letter {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.8rem;
+    font-weight: 700;
+    float: left;
+    line-height: 0.8;
+    margin: 0.05em 0.12em -0.05em 0;
+    color: var(--drop-cap);
+  }
+
+  /* ═══ MATH DISPLAY ════════════════════════════════════════════ */
+  .math-env {
+    background: var(--math-bg);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent2);
+    padding: 1.25rem 1.75rem 1.25rem 1.5rem;
+    margin: 1.75rem 0;
+    overflow-x: auto;
+  }
+
+  .math-env .math-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: var(--ink4);
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+    display: block;
+  }
+
+  .math-env .math-display {
+    font-size: 1.05rem;
+    color: var(--ink);
+    overflow-x: auto;
+  }
+
+  .math-env .math-explain {
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--ink3);
+    margin-top: 0.6rem;
+    line-height: 1.6;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.5rem;
+  }
+
+  /* Inline math styling override */
+  .MathJax { color: var(--ink) !important; }
+
+  /* ═══ BLOCKQUOTE ══════════════════════════════════════════════ */
+  blockquote {
+    margin: 2rem 0;
+    padding: 1.25rem 1.75rem;
+    border-left: 3px solid var(--gold);
+    background: var(--paper2);
+    position: relative;
+  }
+
+  blockquote::before {
+    content: '\201C';
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    color: var(--gold2);
+    opacity: 0.35;
+    position: absolute;
+    top: -0.5rem;
+    left: 0.75rem;
+    line-height: 1;
+  }
+
+  blockquote p {
+    font-style: italic;
+    font-size: 0.97rem;
+    color: var(--ink2);
+    padding-left: 0.5rem;
+    text-align: left;
+    margin: 0;
+  }
+
+  /* ═══ BARRIERS / CALLOUTS ════════════════════════════════════ */
+  .barrier-box {
+    background: #fdf5f5;
+    border: 1px solid #e8c8c8;
+    border-left: 3px solid var(--red);
+    padding: 1.1rem 1.5rem;
+    margin: 1.25rem 0;
+  }
+
+  .barrier-box .barrier-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  .barrier-box p { font-size: 0.93rem; margin: 0; text-align: left; }
+
+  .insight-box {
+    background: #f5f8f2;
+    border: 1px solid #c8d8c0;
+    border-left: 3px solid var(--green);
+    padding: 1.25rem 1.75rem;
+    margin: 2rem 0;
+  }
+
+  .insight-box p { font-size: 0.95rem; margin: 0; text-align: left; }
+
+  /* ═══ DEFINITION / CONJECTURE ENVIRONMENTS ═══════════════════ */
+  .env-block {
+    background: var(--paper2);
+    border: 1px solid var(--rule2);
+    padding: 1.25rem 1.5rem;
+    margin: 1.75rem 0;
+    position: relative;
+  }
+
+  .env-block::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 3px;
+  }
+
+  .env-block.definition::before { background: var(--accent); }
+  .env-block.conjecture::before { background: var(--gold); }
+  .env-block.construction::before { background: var(--accent2); }
+
+  .env-label {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .env-block p { font-size: 0.95rem; margin: 0; text-align: left; }
+  .env-block p + p { margin-top: 0.75rem; }
+
+  /* ═══ TABLE ════════════════════════════════════════════════════ */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 2rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  thead tr {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  thead th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 400;
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }
+
+  tbody tr:nth-child(even) { background: var(--paper2); }
+  tbody tr:nth-child(odd) { background: var(--paper); }
+
+  tbody td {
+    padding: 0.7rem 1rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink2);
+    line-height: 1.5;
+  }
+
+  .table-caption {
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--ink3);
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+
+  /* ═══ REFERENCES ═════════════════════════════════════════════ */
+  .references ol {
+    list-style: none;
+    counter-reset: ref-counter;
+  }
+
+  .references li {
+    counter-increment: ref-counter;
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--ink2);
+  }
+
+  .references li::before {
+    content: '[' counter(ref-counter) ']';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent2);
+    min-width: 2.5rem;
+    padding-top: 0.15rem;
+    flex-shrink: 0;
+  }
+
+  /* ═══ DIVIDERS ════════════════════════════════════════════════ */
+  .section-rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 3.5rem 0;
+  }
+
+  .ornament {
+    text-align: center;
+    color: var(--ink4);
+    font-size: 0.9rem;
+    letter-spacing: 0.5em;
+    margin: 2.5rem 0;
+    opacity: 0.5;
+  }
+
+  /* ═══ FOOTNOTE STYLE NOTES ════════════════════════════════════ */
+  .margin-note {
+    float: right;
+    width: 160px;
+    margin: 0 -180px 1rem 1rem;
+    font-size: 0.72rem;
+    font-style: italic;
+    color: var(--ink4);
+    line-height: 1.5;
+    border-left: 2px solid var(--rule2);
+    padding-left: 0.75rem;
+  }
+
+  /* ═══ PAGE NUMBERS / FOOTER ══════════════════════════════════ */
+  .doc-footer {
+    border-top: 1px solid var(--rule2);
+    margin-top: 5rem;
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--ink4);
+    letter-spacing: 0.1em;
+  }
+
+  /* ═══ SCROLL PROGRESS ════════════════════════════════════════ */
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 220px;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    transform-origin: left;
+    transform: scaleX(0);
+    z-index: 100;
+    transition: transform 0.05s linear;
+  }
+
+  /* ═══ RESPONSIVE ═════════════════════════════════════════════ */
+  @media (max-width: 900px) {
+    .page-wrap { grid-template-columns: 1fr; }
+    .sidebar {
+      position: relative;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--rule);
+    }
+    .toc { display: none; }
+    .progress-bar { left: 0; }
+    main { padding: 0 1.5rem 4rem; }
+    .margin-note { display: none; }
+  }
+
+  @media print {
+    .sidebar { display: none; }
+    .progress-bar { display: none; }
+    .page-wrap { grid-template-columns: 1fr; }
+    main { max-width: 100%; padding: 0; }
+    body { background: white; }
+    .math-env { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+
+<div class="page-wrap">
+
+  <!-- ═══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Contents</div>
+    <ul class="toc">
+      <li><a href="#title" class="toc-link">Title &amp; Abstract</a></li>
+
+      <li class="toc-section">§ 1</li>
+      <li><a href="#s1" class="toc-link">Introduction</a></li>
+
+      <li class="toc-section">§ 2</li>
+      <li><a href="#s2" class="toc-link">Higher-Dimensional Structures</a></li>
+      <ul class="toc toc-sub">
+        <li><a href="#s2-1" class="toc-link">2.1 Manifolds</a></li>
+        <li><a href="#s2-2" class="toc-link">2.2 Riemannian Geometry</a></li>
+        <li><a href="#s2-3" class="toc-link">2.3 Cohomology</a></li>
+        <li><a href="#s2-4" class="toc-link">2.4 Fiber Bundles</a></li>
+      </ul>
+
+      <li class="toc-section">§ 3</li>
+      <li><a href="#s3" class="toc-link">Three Millennium Problems</a></li>
+      <ul class="toc toc-sub">
+        <li><a href="#s3-1" class="toc-link">3.1 Poincaré Conjecture</a></li>
+        <li><a href="#s3-2" class="toc-link">3.2 Hodge Conjecture</a></li>
+        <li><a href="#s3-3" class="toc-link">3.3 Yang-Mills</a></li>
+      </ul>
+
+      <li class="toc-section">§ 4</li>
+      <li><a href="#s4" class="toc-link">P vs NP</a></li>
+      <ul class="toc toc-sub">
+        <li><a href="#s4-1" class="toc-link">4.1 The Problem</a></li>
+        <li><a href="#s4-2" class="toc-link">4.2 Sequential Causality</a></li>
+        <li><a href="#s4-3" class="toc-link">4.3 GCT</a></li>
+        <li><a href="#s4-4" class="toc-link">4.4 The Three Barriers</a></li>
+      </ul>
+
+      <li class="toc-section">§ 5</li>
+      <li><a href="#s5" class="toc-link">Four Research Directions</a></li>
+      <ul class="toc toc-sub">
+        <li><a href="#s5-1" class="toc-link">5.1 Computational Manifolds</a></li>
+        <li><a href="#s5-2" class="toc-link">5.2 Cohomological Complexity</a></li>
+        <li><a href="#s5-3" class="toc-link">5.3 Topos Approach</a></li>
+        <li><a href="#s5-4" class="toc-link">5.4 Dimensional Hierarchy</a></li>
+      </ul>
+
+      <li class="toc-section">§ 6</li>
+      <li><a href="#s6" class="toc-link">Meta-Mathematical Implications</a></li>
+
+      <li class="toc-section">§ 7</li>
+      <li><a href="#s7" class="toc-link">Conclusion</a></li>
+
+      <li class="toc-section">—</li>
+      <li><a href="#refs" class="toc-link">References</a></li>
+      <li><a href="#appendix" class="toc-link">Appendix A</a></li>
+    </ul>
+
+    <div class="sidebar-meta">
+      Unpublished Discussion Paper<br>
+      May 2026<br>
+      Human &amp; Claude (Anthropic)<br>
+      <br>
+      Part II of II
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ══════════════════════════════════════════════════ -->
+  <main>
+
+    <!-- TITLE PAGE -->
+    <div class="title-page" id="title">
+      <div class="journal-label">Speculative Theoretical Framework &nbsp;·&nbsp; Unpublished Discussion Paper</div>
+
+      <h1 class="paper-title">Toward a Higher-Dimensional Approach<br>to Computational Complexity:</h1>
+      <p class="paper-subtitle">Geometry, Causality, and the P&nbsp;vs&nbsp;NP Problem</p>
+
+      <div class="author-block">
+        <span class="author-name">Collaborative Inquiry — Human &amp; Claude (Anthropic)</span>
+        <span class="author-note">Speculative framework developed through extended intellectual dialogue</span>
+      </div>
+
+      <div class="paper-meta">
+        May 2026 &nbsp;&nbsp;|&nbsp;&nbsp; Unpublished Discussion Paper &nbsp;&nbsp;|&nbsp;&nbsp; Part II of II
+      </div>
+
+      <!-- ABSTRACT -->
+      <div class="abstract">
+        <div class="abstract-label">Abstract</div>
+        <p>
+          This paper presents a speculative but mathematically grounded framework proposing that the P&nbsp;vs&nbsp;NP problem — and several other Clay Millennium Prize Problems — may be fundamentally resistant to resolution within existing mathematical paradigms due to an implicit constraint: that both formal proof techniques and computational models are anchored in low-dimensional, causally sequential thinking. We argue that the relevant breakthrough may require the invention of genuinely new mathematical structures — including <em>computational manifolds</em>, <em>cohomological complexity theory</em>, and <em>causality-free computational toposes</em> — in which the distinction between finding and verifying solutions becomes a geometric property rather than a sequential computational one. We situate this proposal within the history of higher-dimensional approaches to the Poincaré Conjecture, Hodge Conjecture, and Yang-Mills mass gap problem, and map the existing barriers to proof (Relativization, Natural Proofs, Algebrization) as indicators that the resolution must transcend current mathematical universes. The paper concludes with four concrete mathematical research directions and the objects that would need to be formally constructed to pursue them.
+        </p>
+        <p class="keywords">
+          <strong>Keywords:</strong> P vs NP, computational complexity, higher-dimensional mathematics, geometric complexity theory, Ricci flow, manifold theory, cohomology, topos theory, Millennium Prize Problems, mathematical invention
+        </p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 1 INTRODUCTION -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s1">
+      <span class="section-num">§ 1</span>
+      <h1 class="section-title">Introduction: The Dimensional Constraint Hypothesis</h1>
+
+      <p class="drop-cap">
+        The seven Clay Millennium Prize Problems represent the deepest unsolved challenges in contemporary mathematics. Despite the diversity of their subject matter — from fluid dynamics to number theory to computational complexity — they share a remarkable structural feature: all have resisted resolution for decades despite being accessible in statement to non-specialists, and all involve questions about <em>global</em> properties of mathematical structures that cannot be resolved by local methods.
+      </p>
+
+      <p>
+        This paper advances a hypothesis we call the <strong>Dimensional Constraint Hypothesis</strong>: that a significant portion of this resistance stems not from the intrinsic difficulty of the problems themselves, but from a mismatch between the dimensionality of the mathematical frameworks brought to bear and the dimensionality at which the problems are naturally resolved.
+      </p>
+
+      <p>
+        The hypothesis is motivated by a striking historical observation. When Poincaré posed his conjecture about three-dimensional manifolds in 1904, the problem was solved in every dimension <em>except</em> the original three — with higher dimensions yielding first, precisely because higher-dimensional geometry affords greater freedom of movement. The three-dimensional case, the lowest and most constrained, fell last. This inversion — where lower dimensions are harder than higher ones — suggests that our intuitive privileging of three-dimensional thinking may systematically mislead mathematical investigation.
+      </p>
+
+      <p>
+        We extend this observation to the P&nbsp;vs&nbsp;NP problem. The standard Turing machine model is fundamentally <em>one-dimensional</em>: a tape, read sequentially, one state causing the next. The causal structure of computation is embedded in its very definition. We propose that a higher-dimensional framework — in which computation is modeled geometrically rather than sequentially, and in which causality is a local rather than global property — may dissolve or resolve the P&nbsp;vs&nbsp;NP distinction in ways that sequential frameworks cannot approach.
+      </p>
+
+      <p>
+        This paper is organized as follows. Section&nbsp;2 reviews the relevant higher-dimensional mathematics already in our possession. Section&nbsp;3 analyzes three Millennium Problems through the lens of dimensional constraint. Section&nbsp;4 develops the P&nbsp;vs&nbsp;NP problem in detail, including the existing proof barriers. Section&nbsp;5 presents four speculative but mathematically coherent research directions. Section&nbsp;6 discusses the meta-mathematical implications, including the possibility of Gödel independence. Section&nbsp;7 concludes.
+      </p>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 2 HIGHER-DIMENSIONAL STRUCTURES -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s2">
+      <span class="section-num">§ 2</span>
+      <h1 class="section-title">Higher-Dimensional Mathematics: Existing Structures</h1>
+
+      <p class="drop-cap">
+        Before articulating what new mathematics might be needed, we survey the higher-dimensional structures already available. The point is to establish that the relevant generalization is not speculative in its foundations — the tools exist — but that their application to computational complexity has been incomplete.
+      </p>
+
+      <h2 class="subsection-title" id="s2-1">2.1 &nbsp; Manifolds and the Freedom of Dimension</h2>
+
+      <p>
+        A smooth \(n\)-manifold is a topological space that locally resembles Euclidean space \(\mathbb{R}^n\). The key insight, counterintuitive to geometric intuition trained on three dimensions, is that higher-dimensional manifolds generically possess <em>more</em> geometric freedom than lower-dimensional ones. Structures that are knotted or obstructed in three dimensions become separable or smoothable with access to additional dimensions.
+      </p>
+
+      <p>
+        This is not merely an intuition. The Whitney embedding theorem guarantees that any smooth \(n\)-manifold embeds in \(\mathbb{R}^{2n}\), and the \(h\)-cobordism theorem — which underlies the high-dimensional Poincaré conjecture — depends essentially on having sufficient dimensional room for the <em>Whitney trick</em>: a geometric maneuver that cancels intersection points by moving them past each other through a higher-dimensional ambient space.
+      </p>
+
+      <h2 class="subsection-title" id="s2-2">2.2 &nbsp; Riemannian Geometry and Curvature</h2>
+
+      <p>
+        Riemannian geometry defines a smooth manifold equipped with a metric tensor \(g_{ij}\) that assigns lengths and angles to tangent vectors at each point. The curvature of the manifold — encoded in the Riemann curvature tensor \(R_{ijkl}\) and its contractions, the Ricci tensor \(R_{ij}\) and scalar curvature \(R\) — measures the deviation of the space from flatness.
+      </p>
+
+      <p>
+        The power of this framework lies in its ability to encode complex global properties (topology, connectivity) in local differential equations (curvature conditions). The <strong>Ricci flow equation</strong>, introduced by Hamilton in 1982 and used decisively by Perelman, evolves the metric by its own curvature:
+      </p>
+
+      <div class="math-env">
+        <span class="math-label">Ricci Flow Equation (Hamilton, 1982)</span>
+        <div class="math-display">
+          \[\frac{\partial g_{ij}}{\partial t} = -2R_{ij}\]
+        </div>
+        <div class="math-explain">
+          Here \(g_{ij}\) is the metric tensor encoding the geometry at every point; \(R_{ij}\) is the Ricci curvature tensor measuring local curvature. The equation drives highly curved regions to smooth out over the time parameter \(t\), analogous to heat diffusion through a material.
+        </div>
+      </div>
+
+      <p>
+        This equation represents a profound conceptual move: treating a static geometric object as something that <em>evolves</em>, using that evolution to reveal its underlying structure. We return to this idea in Section&nbsp;5.1 when proposing an analogous treatment of computational structures.
+      </p>
+
+      <h2 class="subsection-title" id="s2-3">2.3 &nbsp; Cohomology and Global Obstructions</h2>
+
+      <p>
+        Cohomology theory provides algebraic tools for measuring topological features of spaces that are globally present but locally invisible. For a topological space \(X\), the cohomology groups \(H^k(X)\) — definable via singular, de Rham, or Čech constructions — encode information about \(k\)-dimensional "holes" in the space.
+      </p>
+
+      <p>
+        The crucial property of cohomology for our purposes is its ability to detect <em>obstructions</em>: reasons why a locally consistent construction cannot be extended globally. This is precisely the kind of obstacle that appears in complexity theory, where local computational steps may be perfectly valid but fail to assemble into a globally efficient algorithm.
+      </p>
+
+      <h2 class="subsection-title" id="s2-4">2.4 &nbsp; Fiber Bundles and Gauge Theory</h2>
+
+      <p>
+        A fiber bundle is a space \(E\) (the total space) that locally looks like a product \(B \times F\) of a base space \(B\) and a fiber space \(F\), but may be globally twisted. Formally, there is a projection \(\pi: E \to B\) such that \(\pi^{-1}(U) \cong U \times F\) for small open sets \(U \subset B\).
+      </p>
+
+      <p>
+        Fiber bundles are the natural home of gauge theories, including Yang-Mills theory. A connection on a principal bundle — a rule for parallel transport of fibers along paths in the base — plays the role of a gauge field, and its curvature gives the field strength. The Yang-Mills functional is:
+      </p>
+
+      <div class="math-env">
+        <span class="math-label">Yang-Mills Functional</span>
+        <div class="math-display">
+          \[\text{YM}(A) = \int_M |F_A|^2 \, dV\]
+        </div>
+        <div class="math-explain">
+          \(A\) is a connection on a principal \(G\)-bundle over a 4-manifold \(M\); \(F_A = dA + A \wedge A\) is its curvature 2-form; the integral is taken with respect to the Riemannian volume form. The Yang-Mills equations are the Euler-Lagrange equations for this functional.
+        </div>
+      </div>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 3 THREE MILLENNIUM PROBLEMS -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s3">
+      <span class="section-num">§ 3</span>
+      <h1 class="section-title">Three Millennium Problems Through a Dimensional Lens</h1>
+
+      <h2 class="subsection-title" id="s3-1">3.1 &nbsp; The Poincaré Conjecture: A Case Study in Dimensional Inversion</h2>
+
+      <p class="drop-cap">
+        The Poincaré conjecture provides our clearest historical example of dimensional constraint and its resolution. The conjecture states that every simply connected, closed 3-manifold is homeomorphic to the 3-sphere \(S^3\). "Simply connected" means every loop can be contracted to a point — a condition that intuitively characterizes the sphere among surfaces.
+      </p>
+
+      <p>The resolution history exhibits a striking pattern of dimensional inversion:</p>
+
+      <div class="env-block definition">
+        <span class="env-label">Historical Timeline</span>
+        <p><strong>1961 (Smale):</strong> Dimensions \(n \geq 5\) solved first. In these dimensions, the Whitney trick is available — there is room in the ambient space to move intersection points past each other. Proof possible by geometric surgery.</p>
+        <p><strong>1982 (Freedman):</strong> Dimension \(n = 4\) solved, Fields Medal awarded. Required entirely new techniques exploiting exotic smooth structures unique to 4-dimensional topology.</p>
+        <p><strong>2002–2003 (Perelman):</strong> Dimension \(n = 3\), the original case, finally resolved. Required Ricci flow with surgery — a technology invented specifically for this problem.</p>
+      </div>
+
+      <p>
+        This pattern directly instantiates our hypothesis. The problem was hardest in its natural dimension precisely because that dimension is most constrained. Higher-dimensional techniques gave mathematicians the conceptual scaffolding that eventually cracked the lowest-dimensional case.
+      </p>
+
+      <p>
+        Perelman's approach introduced two key innovations. First, Ricci flow treats a static geometric problem as a <em>dynamical system</em>, allowing the problem to reveal itself through evolution. Second, the <em>surgery technique</em> — excising singularities, capping with standard pieces, continuing the flow — suggests a general strategy of managed deformation with potential applications beyond topology.
+      </p>
+
+      <div class="math-env">
+        <span class="math-label">Perelman's Augmented Ricci Flow</span>
+        <div class="math-display">
+          \[\frac{\partial g_{ij}}{\partial t} = -2R_{ij} + \frac{2}{n} R g_{ij}\]
+        </div>
+        <div class="math-explain">
+          This is the normalized Ricci flow, which preserves volume. Perelman introduced a further modification using his \(\mathcal{F}\)-functional and entropy monotonicity to control the long-time behavior and understand the structure of singularities before surgery.
+        </div>
+      </div>
+
+      <h2 class="subsection-title" id="s3-2">3.2 &nbsp; The Hodge Conjecture: The Geometry-Algebra Gap</h2>
+
+      <p>
+        The Hodge conjecture concerns the relationship between the topology and the algebraic geometry of complex manifolds. For a smooth complex projective manifold \(X\), the Hodge decomposition expresses cohomology groups as:
+      </p>
+
+      <div class="math-env">
+        <span class="math-label">Hodge Decomposition</span>
+        <div class="math-display">
+          \[H^n(X, \mathbb{C}) = \bigoplus_{p+q=n} H^{p,q}(X)\]
+        </div>
+        <div class="math-explain">
+          The Hodge decomposition splits the \(n\)-th cohomology of a compact Kähler manifold \(X\) into pieces \(H^{p,q}(X)\) consisting of cohomology classes representable by closed differential forms of type \((p,q)\) — those with \(p\) holomorphic and \(q\) anti-holomorphic differentials.
+        </div>
+      </div>
+
+      <p>
+        The conjecture states that every <em>Hodge class</em> — an element of \(H^{p,p}(X) \cap H^{2p}(X, \mathbb{Q})\) for some \(p\) — is a rational linear combination of the cohomology classes of algebraic subvarieties of \(X\). In other words, every topological cycle of the right type is algebraically realizable.
+      </p>
+
+      <p>
+        The relevance to our thesis is the nature of the gap the conjecture addresses. <em>Topology</em> is flexible, continuous, deformation-invariant. <em>Algebraic geometry</em> is rigid, discrete, equation-defined. The conjecture asks whether these two modes of description secretly agree for manifolds of the right type. This is precisely analogous to P&nbsp;vs&nbsp;NP: does efficient verifiability (flexible, checking-mode access) secretly agree with efficient solvability (rigid, constructive access)?
+      </p>
+
+      <h2 class="subsection-title" id="s3-3">3.3 &nbsp; Yang-Mills and the Mass Gap: Geometry of Infinite-Dimensional Spaces</h2>
+
+      <p>
+        The Yang-Mills existence and mass gap problem asks for a rigorous construction of quantum Yang-Mills theory in four-dimensional spacetime, and a proof that the quantum Hamiltonian \(H\) has a <em>mass gap</em>: \(\text{spec}(H) \cap (0, \Delta) = \emptyset\) for some \(\Delta > 0\).
+      </p>
+
+      <p>
+        The relevance to dimensional thinking is that Yang-Mills theory lives on an infinite-dimensional space — the moduli space \(\mathcal{A}/\mathcal{G}\) of gauge equivalence classes of connections. Understanding the spectral gap requires understanding the geometry of this space, for which the relevant tools do not yet fully exist.
+      </p>
+
+      <div class="math-env">
+        <span class="math-label">Yang-Mills Equations</span>
+        <div class="math-display">
+          \[D_A^* F_A = 0 \qquad \text{and} \qquad D_A F_A = 0\]
+        </div>
+        <div class="math-explain">
+          These are the Euler-Lagrange equations for the Yang-Mills functional. \(D_A\) is the covariant derivative determined by connection \(A\), and \(F_A\) is the curvature 2-form. The second equation is the Bianchi identity, satisfied automatically. The first is the content of the Yang-Mills condition.
+        </div>
+      </div>
+
+      <p>
+        In finite dimensions, spectral gaps relate to curvature via the Lichnerowicz theorem: positive Ricci curvature implies a spectral gap for the Laplacian. An analogous result for the relevant infinite-dimensional spaces of connections, if provable, would directly imply the mass gap — but we lack the geometric framework to formulate such a result precisely.
+      </p>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 4 P VS NP -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s4">
+      <span class="section-num">§ 4</span>
+      <h1 class="section-title">P&nbsp;vs&nbsp;NP: The Problem, the Barriers, and the Dimensional Diagnosis</h1>
+
+      <h2 class="subsection-title" id="s4-1">4.1 &nbsp; The Problem</h2>
+
+      <p class="drop-cap">
+        The P&nbsp;vs&nbsp;NP problem asks whether every problem whose solution can be verified in polynomial time can also be <em>solved</em> in polynomial time. Let \(\mathbf{P}\) denote the class of decision problems solvable by a deterministic Turing machine in time \(O(n^k)\) for some constant \(k\), and \(\mathbf{NP}\) the class solvable by a nondeterministic Turing machine in polynomial time — equivalently, the class whose positive instances have polynomial-time verifiable certificates.
+      </p>
+
+      <p>
+        The question is whether \(\mathbf{P} = \mathbf{NP}\). The conjecture, almost universally believed but unproven, is that \(\mathbf{P} \neq \mathbf{NP}\): that there exist problems in \(\mathbf{NP}\) not in \(\mathbf{P}\), i.e., problems whose solutions can be efficiently checked but not efficiently found.
+      </p>
+
+      <p>
+        The canonical \(\mathbf{NP}\)-complete problem is Boolean satisfiability (SAT): given a propositional formula in conjunctive normal form, determine whether there exists a satisfying truth assignment. Cook's theorem (1971) established SAT as \(\mathbf{NP}\)-complete: every problem in \(\mathbf{NP}\) polynomial-time reduces to SAT. If any \(\mathbf{NP}\)-complete problem admits a polynomial-time algorithm, then \(\mathbf{P} = \mathbf{NP}\).
+      </p>
+
+      <h2 class="subsection-title" id="s4-2">4.2 &nbsp; The Sequential Causality Embedding</h2>
+
+      <p>
+        We wish to highlight a feature of the standard formulation that is usually treated as definitional rather than as a potential source of difficulty. The Turing machine model embeds computation in a specific causal structure: states succeed each other in a linear sequence, each determined by the previous. Time is discrete and directional. The entire framework is <em>one-dimensional in the temporal sense</em>.
+      </p>
+
+      <p>
+        This causal embedding is not logically forced by the notion of computation. It is a modeling choice — one that has proven extraordinarily productive but may not be the natural home of all computational distinctions. The P&nbsp;vs&nbsp;NP distinction, we suggest, is an artifact of this embedding: a distinction that appears sharp in the one-dimensional causal model but may not be a fundamental feature of the underlying mathematical reality.
+      </p>
+
+      <blockquote>
+        <p>
+          If the solution space could be <em>read</em> rather than <em>searched</em> — if the geometry of the computation space allowed a direct correspondence between problem instances and solutions — the finding-checking distinction might collapse entirely. This is what higher-dimensional thinking might provide.
+        </p>
+      </blockquote>
+
+      <h2 class="subsection-title" id="s4-3">4.3 &nbsp; Geometric Complexity Theory</h2>
+
+      <p>
+        The most developed existing attempt to apply higher-dimensional mathematics to P&nbsp;vs&nbsp;NP is <strong>Geometric Complexity Theory (GCT)</strong>, introduced by Mulmuley and Sohoni (2001). GCT translates the question into the geometry of algebraic varieties in high-dimensional representation spaces.
+      </p>
+
+      <p>
+        The program centers on Valiant's algebraic complexity conjecture: that the permanent polynomial \(\text{perm}_n(x)\) cannot be expressed as the determinant of a polynomial-size matrix of linear forms. GCT reformulates this as a question about orbit closures. The group \(GL(n^2)\) acts on the space of degree-\(n\) polynomials by linear substitution. The question is whether \(\text{perm}_m\) lies outside the closure of the orbit of \(\text{det}_n\):
+      </p>
+
+      <div class="math-env">
+        <span class="math-label">GCT Core Formulation (Mulmuley-Sohoni, 2001)</span>
+        <div class="math-display">
+          \[\text{perm}_m \notin \overline{GL(n^2) \cdot \text{det}_n}\]
+        </div>
+        <div class="math-explain">
+          \(\text{det}_n\) is the determinant polynomial in \(n^2\) variables (computable in polynomial time); \(\text{perm}_m\) is the permanent polynomial (conjectured to be hard); \(GL(n^2)\) is the group of invertible linear transformations acting by variable substitution. The orbit closure \(\overline{GL(n^2) \cdot \text{det}_n}\) is a variety in the space of polynomials. Valiant's conjecture — the algebraic analogue of \(\mathbf{P} \neq \mathbf{NP}\) — asserts that the permanent is geometrically separated from this variety.
+        </div>
+      </div>
+
+      <p>
+        To establish this separation, GCT seeks <em>representation-theoretic obstructions</em>: irreducible representations of \(GL(n)\) appearing in the coordinate ring of the permanent variety but not in that of the determinant orbit closure. These would be the algebraic-geometric witnesses to the separation.
+      </p>
+
+      <h2 class="subsection-title" id="s4-4">4.4 &nbsp; The Three Barriers</h2>
+
+      <p>
+        The resistance of P&nbsp;vs&nbsp;NP to proof is not merely a matter of insufficient effort. Three results have established that entire classes of proof techniques are provably insufficient.
+      </p>
+
+      <div class="barrier-box">
+        <span class="barrier-label">Barrier I — Relativization &nbsp;·&nbsp; Baker, Gill, Solovay (1975)</span>
+        <p>
+          There exist oracles \(A\) and \(B\) such that \(\mathbf{P}^A = \mathbf{NP}^A\) and \(\mathbf{P}^B \neq \mathbf{NP}^B\). Since standard computability arguments hold uniformly relative to any oracle, any <em>relativizing</em> proof technique cannot resolve \(\mathbf{P}\) vs \(\mathbf{NP}\). Most known techniques in complexity theory relativize.
+        </p>
+      </div>
+
+      <div class="barrier-box">
+        <span class="barrier-label">Barrier II — Natural Proofs &nbsp;·&nbsp; Razborov, Rudich (1994)</span>
+        <p>
+          A proof is <em>natural</em> if it works via a property of Boolean functions that is both constructive (efficiently computable on random inputs) and large (holds for most functions). Razborov and Rudich proved: if one-way functions exist, no natural proof can establish super-polynomial circuit lower bounds. Since one-way functions are implied by \(\mathbf{P} \neq \mathbf{NP}\), any natural proof strategy is circular or blocked.
+        </p>
+      </div>
+
+      <div class="barrier-box">
+        <span class="barrier-label">Barrier III — Algebrization &nbsp;·&nbsp; Aaronson, Wigderson (2009)</span>
+        <p>
+          Relativization was extended to algebraic oracles. There exist algebraic oracles with contradictory relativized separations. Any <em>algebrizing</em> proof technique — one remaining valid in the algebraic oracle model — cannot resolve \(\mathbf{P}\) vs \(\mathbf{NP}\). This blocks many algebraic approaches that had appeared to evade the first barrier.
+        </p>
+      </div>
+
+      <blockquote>
+        <p>
+          Taken together, these barriers do not merely say P&nbsp;vs&nbsp;NP is hard. They say: any resolution must come from techniques that are simultaneously non-relativizing, non-natural, and non-algebrizing. No known general technique satisfies all three conditions. The proof space has been progressively and formally walled off.
+        </p>
+      </blockquote>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 5 FOUR RESEARCH DIRECTIONS -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s5">
+      <span class="section-num">§ 5</span>
+      <h1 class="section-title">Four Research Directions Toward a Higher-Dimensional Framework</h1>
+
+      <p class="drop-cap">
+        We now present four speculative but mathematically coherent research directions. Each is framed as a precise (if informal) conjecture together with the mathematical objects that would need to be formally constructed to pursue it. Each direction is designed to be simultaneously non-relativizing, non-natural, and non-algebrizing — escaping all three barriers by operating at a different mathematical level.
+      </p>
+
+      <h2 class="subsection-title" id="s5-1">5.1 &nbsp; Computational Manifolds and Complexity Curvature</h2>
+
+      <p>
+        The first direction models computation geometrically: not as a sequence of states but as a flow on a Riemannian manifold whose metric encodes computational difficulty. The inspiration is Ricci flow — the insight that treating a static object as evolving can reveal its hidden structure.
+      </p>
+
+      <div class="env-block definition">
+        <span class="env-label">Definition 5.1 (Computational Manifold, Informal)</span>
+        <p>
+          For a computational problem \(f\), define its <em>computational manifold</em> \(\mathcal{M}_f\) as a Riemannian manifold in which: each point corresponds to a partial computation state; the metric tensor \(g_{ij}\) encodes computational distance from solution states; and the curvature tensor \(R_{ij}\) captures local structure of the solution space.
+        </p>
+      </div>
+
+      <p>Augment the Ricci flow with a <em>complexity tensor</em> \(\Lambda_{ij}(f)\) encoding the problem-specific asymmetry between finding and checking:</p>
+
+      <div class="math-env">
+        <span class="math-label">Augmented Complexity Flow</span>
+        <div class="math-display">
+          \[\frac{\partial g_{ij}}{\partial t} = -2R_{ij} + \Lambda_{ij}(f)\]
+        </div>
+        <div class="math-explain">
+          The standard Ricci flow term \(-2R_{ij}\) drives the geometry toward uniformity. The complexity tensor \(\Lambda_{ij}(f)\) breaks symmetry to encode the problem's structure — in particular, the asymmetry between the efficient verification of solutions and the potentially intractable search for them.
+        </div>
+      </div>
+
+      <div class="env-block conjecture">
+        <span class="env-label">Conjecture 5.1 (Computational Curvature)</span>
+        <p>
+          \(\mathbf{P} \neq \mathbf{NP}\) if and only if for every \(\mathbf{NP}\)-complete problem \(f\), the computational manifold \(\mathcal{M}_f\) has everywhere positive sectional curvature. Positive curvature implies no geometric shortcuts — every path from a problem instance to its solution has length bounded below by the complexity of \(f\).
+        </p>
+      </div>
+
+      <p>
+        This conjecture would be non-relativizing because the geometric structure of \(\mathcal{M}_f\) is intrinsic to \(f\), not oracle-relative. It would be non-natural because it does not work by constructing a property of most Boolean functions. The central mathematical work required is: (i) the formal construction of \(\mathcal{M}_f\) from the combinatorial structure of \(f\), and (ii) establishing a rigorous correspondence between sectional curvature and time complexity.
+      </p>
+
+      <h2 class="subsection-title" id="s5-2">5.2 &nbsp; Cohomological Complexity Theory</h2>
+
+      <p>
+        The second direction builds a cochain complex from the structure of computation and uses its cohomology to detect global obstructions — reasons why efficient local computations cannot assemble into a globally efficient algorithm.
+      </p>
+
+      <div class="env-block construction">
+        <span class="env-label">Construction 5.2 (Computational Cochain Complex, Informal)</span>
+        <p>
+          For a complexity class \(\mathcal{C}\), define a cochain complex:
+        </p>
+        <p>
+          \[0 \to C^0 \xrightarrow{\delta^0} C^1 \xrightarrow{\delta^1} C^2 \xrightarrow{\delta^2} \cdots \xrightarrow{\delta^{n-1}} C^n \to 0\]
+        </p>
+        <p>
+          where \(C^k\) is the space of \(k\)-tuples of computational steps, and the coboundary operator \(\delta^k: C^k \to C^{k+1}\) encodes how steps compose and propagate. The cohomology groups \(H^k(\mathcal{C}) = \ker(\delta^k)/\mathrm{im}(\delta^{k-1})\) measure computational obstructions that persist after all local structure is accounted for.
+        </p>
+      </div>
+
+      <div class="env-block conjecture">
+        <span class="env-label">Conjecture 5.2 (Cohomological Separation)</span>
+        <p>
+          \(\mathbf{P} \neq \mathbf{NP}\) if and only if there exists \(k\) such that \(H^k(\mathbf{NP}) \not\cong H^k(\mathbf{P})\). The cohomology groups detect a topological difference in the shape of the two complexity classes — a difference with no local, sequential explanation.
+        </p>
+      </div>
+
+      <p>
+        This approach generalizes GCT: while GCT asks about the geometry of orbit closures of specific polynomials, cohomological complexity theory asks about the global topological structure of entire complexity classes. The key mathematical work is the formal definition of \(\delta^k\) and a proof that the cohomology groups are well-defined invariants of the complexity class, independent of encoding choices.
+      </p>
+
+      <h2 class="subsection-title" id="s5-3">5.3 &nbsp; Causality-Free Computation: The Topos Approach</h2>
+
+      <p>
+        The third and most radical direction proposes to replace the Boolean logic underlying Turing computation with a richer internal logic — one in which causality is local rather than global, and in which "finding" and "checking" are geometric relationships rather than sequential operations.
+      </p>
+
+      <p>
+        A <em>topos</em> is a mathematical universe with its own internal logic. The category of sets, with classical Boolean logic, is the topos underlying standard mathematics. Other toposes — Grothendieck toposes, realizability toposes, presheaf toposes — have different internal logics in which mathematical objects behave genuinely differently. The subobject classifier \(\Omega\) of a topos plays the role of the "truth-value object": in the Boolean topos of sets, \(\Omega = \{0,1\}\); in other toposes, \(\Omega\) may be a richer space.
+      </p>
+
+      <div class="env-block definition">
+        <span class="env-label">Proposal 5.3 (Computational Topos, Informal)</span>
+        <p>
+          Construct a computational topos \(\mathcal{T}_{\mathrm{comp}}\) whose subobject classifier \(\Omega_{\mathrm{comp}}\) is not the two-point Boolean algebra but a continuous space encoding all possible computational paths. In \(\mathcal{T}_{\mathrm{comp}}\), truth is not a binary assignment but a geometric position in \(\Omega_{\mathrm{comp}}\), and the causal structure of computation is a local rather than global property.
+        </p>
+      </div>
+
+      <div class="math-env">
+        <span class="math-label">Topos-Theoretic Reformulation</span>
+        <div class="math-display">
+          \[\mathbf{P} = \mathbf{NP} \iff \Omega_{\mathrm{comp}} \cong \{0,1\}\]
+        </div>
+        <div class="math-explain">
+          If \(\Omega_{\mathrm{comp}}\) is trivial (isomorphic to the Boolean two-point set), then every NP certificate corresponds geometrically to a P algorithm — the finding-checking distinction collapses. If \(\Omega_{\mathrm{comp}}\) is non-trivial, computational truths exist that are globally inaccessible from any local causal chain, expressing \(\mathbf{P} \neq \mathbf{NP}\) in the topos-theoretic language.
+        </div>
+      </div>
+
+      <p>
+        This approach is genuinely non-relativizing, non-natural, and non-algebrizing: it changes the underlying <em>logical universe</em> rather than working within it. The mathematical work required is substantial: constructing \(\mathcal{T}_{\mathrm{comp}}\), proving it contains standard computation as a faithful subcategory, and establishing the correspondence between the subobject classifier and the complexity separation.
+      </p>
+
+      <h2 class="subsection-title" id="s5-4">5.4 &nbsp; Dimensional Complexity Hierarchy</h2>
+
+      <p>
+        The fourth direction is the most immediately formalizable. It defines a hierarchy of complexity classes indexed by the dimension of the computational model, recasting P&nbsp;vs&nbsp;NP as a question about the critical dimension at which the hierarchy collapses.
+      </p>
+
+      <div class="env-block definition">
+        <span class="env-label">Definition 5.4 (Dimensional Complexity Classes)</span>
+        <p>
+          For \(k \geq 1\), let \(\mathbf{P}_k\) denote the class of problems solvable in polynomial time by a \(k\)-dimensional computational process: a process operating on a \(k\)-manifold where information flows simultaneously in \(k\) independent directions. Standard \(\mathbf{P}\) corresponds to \(\mathbf{P}_1\) (the one-dimensional Turing tape).
+        </p>
+      </div>
+
+      <div class="math-env">
+        <span class="math-label">Dimensional Complexity Hierarchy</span>
+        <div class="math-display">
+          \[\mathbf{P}_1 \subseteq \mathbf{P}_2 \subseteq \mathbf{P}_3 \subseteq \cdots \subseteq \mathbf{P}_k \subseteq \cdots\]
+        </div>
+        <div class="math-explain">
+          The hierarchy is conjectured to be strict: each additional dimension may allow polynomial-time solution of problems intractable in lower dimensions. The question is whether the hierarchy stabilizes, and at what dimension \(\mathbf{NP}\) is absorbed.
+        </div>
+      </div>
+
+      <div class="env-block conjecture">
+        <span class="env-label">Conjecture 5.4 (Dimensional Collapse)</span>
+        <p>
+          Either \(\mathbf{NP} \subseteq \mathbf{P}_k\) for some finite \(k\) — in which case there exists a critical dimension at which the finding-checking distinction collapses — or the hierarchy is strict and \(\mathbf{NP}\) is not contained in any \(\mathbf{P}_k\), which would constitute a stronger statement than \(\mathbf{P} \neq \mathbf{NP}\).
+        </p>
+      </div>
+
+      <p>
+        The mathematical tools for studying this hierarchy exist: <em>persistent homology</em> (from topological data analysis) tracks which computational features survive as dimension increases; Ramsey-theoretic arguments identify the dimension at which certain patterns must appear; combinatorial topology on manifolds provides a language for \(k\)-dimensional information flow.
+      </p>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 6 META-MATHEMATICAL IMPLICATIONS -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s6">
+      <span class="section-num">§ 6</span>
+      <h1 class="section-title">Meta-Mathematical Implications</h1>
+
+      <h2 class="subsection-title">6.1 &nbsp; The Possibility of Gödel Independence</h2>
+
+      <p class="drop-cap">
+        A sobering possibility, raised by Aaronson and others, is that P&nbsp;vs&nbsp;NP may be <em>independent</em> of the standard axioms of mathematics (ZFC). Gödel's incompleteness theorems guarantee the existence of statements that are true but unprovable within any sufficiently powerful consistent formal system. While independence results for natural mathematical statements are rare, they are not unprecedented: the Continuum Hypothesis, large cardinal axioms, and several combinatorial statements (e.g., Borel Determinacy beyond the first uncountable ordinal) have been shown independent of ZFC.
+      </p>
+
+      <p>
+        If P&nbsp;vs&nbsp;NP is independent of ZFC, the implications of our framework change character. A proof within ZFC is impossible not merely because we haven't found the right technique, but because the statement has no determinate truth value within the axiom system. In this case, resolving P&nbsp;vs&nbsp;NP requires moving to a stronger axiom system — a mathematical universe that is, in a precise sense, of higher logical dimension than ZFC.
+      </p>
+
+      <div class="insight-box">
+        <p>
+          This reframes the entire enterprise. The invention of new higher-dimensional mathematics would not merely be a clever strategy for finding a proof. It would be a <em>necessary step</em>: the construction of a new mathematical universe in which the question first becomes decidable. The Dimensional Constraint Hypothesis, if correct in this strongest form, would explain not only why the problem has resisted proof, but why it must.
+        </p>
+      </div>
+
+      <h2 class="subsection-title">6.2 &nbsp; Physics Intuition as Mathematical Discovery</h2>
+
+      <p>
+        The history of mathematics offers several examples in which physical intuition about higher-dimensional structures yielded pure mathematical results inaccessible to conventional approaches. Witten's work on mirror symmetry — motivated by string theory compactified on Calabi-Yau 3-folds — produced Gromov-Witten invariants that pure mathematicians had not independently discovered. The willingness of physicists to reason pragmatically about 11-dimensional spaces gave them access to mathematical truths that the more cautious approach of pure mathematics had not reached.
+      </p>
+
+      <p>
+        This suggests a methodological point for the research directions of Section&nbsp;5: they may benefit from deliberate <em>physical reasoning</em> — treating computational problems as physical systems, asking what a physicist would say about the geometry of their solution spaces, and using physical intuition to generate conjectures for subsequent rigorous verification.
+      </p>
+
+      <h2 class="subsection-title">6.3 &nbsp; The Intuition Gap</h2>
+
+      <p>
+        There is a distinction, often elided in mathematical practice, between the <em>algebra</em> of higher dimensions and the <em>intuition</em> of higher dimensions. We possess the former in abundance: Riemannian geometry, algebraic topology, representation theory — all provide formalisms that work seamlessly in \(n\) dimensions for any \(n\).
+      </p>
+
+      <p>
+        What we lack, and what may be the true bottleneck, is felt geometric intuition for higher-dimensional spaces. A geometer working in three dimensions has immediate, embodied access to the space they describe — they can sketch it, rotate it mentally, sense what it looks like from different angles. This intuitive access enables conjecture formation, pattern recognition, and the exploratory thinking that precedes rigorous proof.
+      </p>
+
+      <p>
+        For higher-dimensional spaces, this intuitive access is largely absent. We draw two-dimensional projections and reason by analogy. The algebraic machinery works correctly, but the felt sense of the geometry — the ability to <em>see</em> what is happening — is missing.
+      </p>
+
+      <blockquote>
+        <p>
+          The breakthrough may come from someone who genuinely feels higher-dimensional geometry the way we feel three-dimensional space: not by drawing projections or reasoning algebraically, but by direct geometric intuition operating natively in higher dimensions. Whether such intuition can be cultivated, or whether it requires a fundamental change in how mathematics is taught and practiced, remains an open and important question.
+        </p>
+      </blockquote>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- § 7 CONCLUSION -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="s7">
+      <span class="section-num">§ 7</span>
+      <h1 class="section-title">Conclusion</h1>
+
+      <p class="drop-cap">
+        We have argued that the resistance of the P&nbsp;vs&nbsp;NP problem — and several other Millennium Prize Problems — to resolution may stem in part from a dimensional constraint: the implicit anchoring of both proof techniques and computational models in low-dimensional, causally sequential thinking.
+      </p>
+
+      <p>
+        The historical evidence from the Poincaré conjecture supports this diagnosis. The problem was hardest in its natural dimension and yielded first in higher dimensions, where geometric freedom was greater. The proof ultimately required a genuinely new mathematical technology — Ricci flow with surgery — that treated a static geometric problem as a dynamical system and used higher-dimensional geometric intuition to navigate singularities.
+      </p>
+
+      <p>
+        The three barriers to proving P&nbsp;vs&nbsp;NP — relativization, natural proofs, and algebrization — establish formally that the proof must come from outside every currently available mathematical framework. This is consistent with our hypothesis: the resolution requires genuinely new mathematical structures rather than clever application of existing ones.
+      </p>
+
+      <p>
+        We have proposed four research directions — computational manifolds, cohomological complexity theory, the topos-theoretic approach, and the dimensional complexity hierarchy — each representing a concrete mathematical research program. Each requires the formal construction of new mathematical objects: the computational manifold \(\mathcal{M}_f\), the complexity cochain complex \(C^\bullet\), the computational topos \(\mathcal{T}_{\mathrm{comp}}\), and the dimensional classes \(\mathbf{P}_k\).
+      </p>
+
+      <p>
+        Whether any of these directions leads to a proof or refutation of P&nbsp;vs&nbsp;NP remains entirely open. What we have argued is that the question deserves to be approached not just with more sophisticated tools from within existing frameworks, but with the ambition to <em>invent</em> new frameworks — to expand the mathematical universe to a dimension at which the question becomes transparent.
+      </p>
+
+      <p>
+        Such expansions have happened before. Calculus was invented to describe motion. Complex numbers were invented to solve equations. Category theory was invented to unify mathematical structures. Each time, the invention of new mathematical language brought previously inaccessible territory into view. The P&nbsp;vs&nbsp;NP problem may be waiting for its own such invention.
+      </p>
+
+      <div class="ornament">· · ·</div>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- REFERENCES -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section references" id="refs">
+      <span class="section-num">References</span>
+      <h1 class="section-title">References</h1>
+
+      <ol>
+        <li>Aaronson, S. and Wigderson, A. (2009). Algebrization: A new barrier in complexity theory. <em>ACM Transactions on Computation Theory</em>, 1(1), 1–54.</li>
+        <li>Baker, T., Gill, J. and Solovay, R. (1975). Relativizations of the P=?NP question. <em>SIAM Journal on Computing</em>, 4(4), 431–442.</li>
+        <li>Cook, S. (1971). The complexity of theorem-proving procedures. <em>Proceedings of the 3rd Annual ACM Symposium on Theory of Computing</em>, 151–158.</li>
+        <li>Freedman, M. (1982). The topology of four-dimensional manifolds. <em>Journal of Differential Geometry</em>, 17(3), 357–453.</li>
+        <li>Hamilton, R. (1982). Three-manifolds with positive Ricci curvature. <em>Journal of Differential Geometry</em>, 17(2), 255–306.</li>
+        <li>Karp, R. (1972). Reducibility among combinatorial problems. In <em>Complexity of Computer Computations</em> (pp. 85–103). Plenum Press.</li>
+        <li>Lawvere, F.W. (1970). Quantifiers and sheaves. <em>Proceedings of the International Congress of Mathematicians</em>, 329–334.</li>
+        <li>Mulmuley, K. and Sohoni, M. (2001). Geometric complexity theory I: An approach to the P vs. NP and related problems. <em>SIAM Journal on Computing</em>, 31(2), 496–526.</li>
+        <li>Perelman, G. (2002). The entropy formula for the Ricci flow and its geometric applications. <em>arXiv:math/0211159</em>.</li>
+        <li>Perelman, G. (2003). Ricci flow with surgery on three-manifolds. <em>arXiv:math/0303109</em>.</li>
+        <li>Razborov, A. and Rudich, S. (1994). Natural proofs. <em>Journal of Computer and System Sciences</em>, 55(1), 24–35.</li>
+        <li>Smale, S. (1961). Generalized Poincaré's conjecture in dimensions greater than four. <em>Annals of Mathematics</em>, 74(2), 391–406.</li>
+        <li>Valiant, L. (1979). Completeness classes in algebra. <em>Proceedings of the 11th Annual ACM Symposium on Theory of Computing</em>, 249–261.</li>
+        <li>Witten, E. (1989). Quantum field theory and the Jones polynomial. <em>Communications in Mathematical Physics</em>, 121(3), 351–399.</li>
+        <li>Witten, E. (1990). On the Kodaira embedding theorem and mirror symmetry. <em>Essays on Mirror Manifolds</em>, International Press.</li>
+      </ol>
+    </section>
+
+    <hr class="section-rule">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- APPENDIX A -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="appendix">
+      <span class="section-num">Appendix A</span>
+      <h1 class="section-title">Mathematical Objects Required: A Summary</h1>
+
+      <p>
+        The following table summarizes the new mathematical objects whose formal construction is required to pursue the research directions of Section&nbsp;5. For each, we give the informal description, the formal work required, and the barrier(s) it is designed to escape.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Object</th>
+              <th>Informal Description</th>
+              <th>Key Construction Required</th>
+              <th>Barriers Escaped</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Computational manifold \(\mathcal{M}_f\)</strong></td>
+              <td>Riemannian manifold encoding all partial computation states and their geometric relationships for problem \(f\)</td>
+              <td>Formal metric from combinatorial structure of \(f\); correspondence between sectional curvature and time complexity</td>
+              <td>Relativization, Natural Proofs</td>
+            </tr>
+            <tr>
+              <td><strong>Complexity tensor \(\Lambda_{ij}(f)\)</strong></td>
+              <td>Tensor field on \(\mathcal{M}_f\) encoding the finding-checking asymmetry of problem \(f\)</td>
+              <td>Well-definedness; independence of computational model representation</td>
+              <td>Natural Proofs</td>
+            </tr>
+            <tr>
+              <td><strong>Cochain complex \(C^\bullet(\mathcal{C})\)</strong></td>
+              <td>Cochain complex built from computational steps; coboundary encodes step composition</td>
+              <td>Formal coboundary operators; proof that \(H^k(\mathcal{C})\) are well-defined class invariants</td>
+              <td>All three barriers</td>
+            </tr>
+            <tr>
+              <td><strong>Computational topos \(\mathcal{T}_{\mathrm{comp}}\)</strong></td>
+              <td>A topos whose internal logic replaces Boolean causality with geometric path-space truth</td>
+              <td>Topos construction; faithful embedding of standard computation; correspondence of \(\Omega_{\mathrm{comp}}\) to complexity</td>
+              <td>All three barriers</td>
+            </tr>
+            <tr>
+              <td><strong>Classifier \(\Omega_{\mathrm{comp}}\)</strong></td>
+              <td>Subobject classifier of \(\mathcal{T}_{\mathrm{comp}}\); trivial iff \(\mathbf{P} = \mathbf{NP}\)</td>
+              <td>Explicit construction; proof of triviality correspondence</td>
+              <td>All three barriers</td>
+            </tr>
+            <tr>
+              <td><strong>Dimensional classes \(\mathbf{P}_k\)</strong></td>
+              <td>Problems solvable by polynomial-time computation on a \(k\)-manifold with \(k\)-directional information flow</td>
+              <td>Formal definition of \(k\)-dimensional computation; relation to standard models; strictness of hierarchy</td>
+              <td>Relativization, Algebrization</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="table-caption">Table A.1: New mathematical objects required for the research programs of Section 5.</p>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <div class="doc-footer">
+      <span>Higher-Dimensional Mathematics &amp; Computational Complexity</span>
+      <span>Unpublished Discussion Paper · May 2026</span>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ── Progress bar ────────────────────────────────────────────
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const s = document.documentElement;
+    const pct = s.scrollTop / (s.scrollHeight - s.clientHeight);
+    bar.style.transform = `scaleX(${pct})`;
+  }, { passive: true });
+
+  // ── TOC active state ─────────────────────────────────────────
+  const sections = document.querySelectorAll('[id]');
+  const links = document.querySelectorAll('.toc-link');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.toc-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
